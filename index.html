@@ -497,32 +497,56 @@ function showStep(stepNumber) {
     
     if (stepNumber === 2 || stepNumber === 3) {
         const containerId = stepNumber === 2 ? 'accessCodeInputs' : 'confirmCodeInputs';
+        const firstInput = document.querySelector(`#${containerId} .code-input`);
         
-        // iOS에서도 작동하는 키보드 표시 방법
-        setTimeout(() => {
-            const firstInput = document.querySelector(`#${containerId} .code-input`);
-            if (firstInput) {
-                // 입력 필드 속성 변경
-                firstInput.readOnly = false;
-                firstInput.type = 'tel'; // number 대신 tel 사용
+        if (firstInput) {
+            // 입력 필드 준비
+            firstInput.readOnly = false;
+            firstInput.type = 'tel';
+            firstInput.inputMode = 'numeric';
+            
+            // 즉시 포커스 시도
+            firstInput.focus();
+            firstInput.click();
+            
+            // 화면 전환 애니메이션 후 다시 시도
+            setTimeout(() => {
+                // 포커스 강제 적용
+                firstInput.style.display = 'none';
+                firstInput.offsetHeight; // 리플로우 강제
+                firstInput.style.display = 'block';
+                firstInput.focus();
+                firstInput.click();
                 
-                // 포커스 및 클릭 이벤트 시퀀스
-                const focusAndClick = () => {
+                // 가상의 키보드 이벤트 발생
+                firstInput.dispatchEvent(new InputEvent('focus'));
+                firstInput.dispatchEvent(new KeyboardEvent('keydown', { key: '0' }));
+                firstInput.dispatchEvent(new KeyboardEvent('keyup', { key: '0' }));
+                
+                // 추가 시도
+                setTimeout(() => {
                     firstInput.focus();
                     firstInput.click();
-                };
-                
-                // 여러 번 시도
-                focusAndClick();
-                requestAnimationFrame(focusAndClick);
-                setTimeout(focusAndClick, 100);
-            }
-        }, 400); // 화면 전환 애니메이션 완료 후 실행
+                }, 100);
+            }, 300);
+        }
     }
 }
 
-// HTML의 input 요소 type 속성도 수정
-// <input type="tel" class="code-input" pattern="\d*" inputmode="numeric" maxlength="1" aria-label="첫번째 숫자">
+// HTML 수정
+// type="number" 대신 다음과 같이 변경:
+/*
+<input 
+    type="tel" 
+    class="code-input" 
+    pattern="[0-9]*" 
+    inputmode="numeric" 
+    maxlength="1" 
+    aria-label="첫번째 숫자"
+    style="opacity: 1; -webkit-user-select: text"
+>
+*/
+        
         function showError(elementId, message) {
             const errorElement = document.getElementById(elementId);
             errorElement.textContent = message;
