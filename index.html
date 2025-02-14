@@ -498,28 +498,31 @@ function showStep(stepNumber) {
     if (stepNumber === 2 || stepNumber === 3) {
         const containerId = stepNumber === 2 ? 'accessCodeInputs' : 'confirmCodeInputs';
         
-        // iOS에서 키보드를 강제로 표시하기 위한 트릭
+        // iOS에서도 작동하는 키보드 표시 방법
         setTimeout(() => {
             const firstInput = document.querySelector(`#${containerId} .code-input`);
             if (firstInput) {
+                // 입력 필드 속성 변경
                 firstInput.readOnly = false;
+                firstInput.type = 'tel'; // number 대신 tel 사용
                 
-                // 1. 먼저 포커스
-                firstInput.focus();
+                // 포커스 및 클릭 이벤트 시퀀스
+                const focusAndClick = () => {
+                    firstInput.focus();
+                    firstInput.click();
+                };
                 
-                // 2. 선택 범위 설정
-                firstInput.setSelectionRange(0, 0);
-                
-                // 3. blur 후 다시 focus
-                firstInput.blur();
-                firstInput.focus();
-                
-                // 4. 클릭 이벤트 시뮬레이션
-                firstInput.click();
+                // 여러 번 시도
+                focusAndClick();
+                requestAnimationFrame(focusAndClick);
+                setTimeout(focusAndClick, 100);
             }
-        }, 300);
+        }, 400); // 화면 전환 애니메이션 완료 후 실행
     }
 }
+
+// HTML의 input 요소 type 속성도 수정
+// <input type="tel" class="code-input" pattern="\d*" inputmode="numeric" maxlength="1" aria-label="첫번째 숫자">
         function showError(elementId, message) {
             const errorElement = document.getElementById(elementId);
             errorElement.textContent = message;
