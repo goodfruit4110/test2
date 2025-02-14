@@ -490,26 +490,36 @@
             });
         }
 
-        function showStep(stepNumber) {
-            document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
-            const nextStep = document.getElementById(`step${stepNumber}`);
-            nextStep.classList.add('active');
-            
-            // 액세스 코드 입력 화면(step2)나 확인 화면(step3)으로 전환될 때
-            if (stepNumber === 2 || stepNumber === 3) {
-                const containerId = stepNumber === 2 ? 'accessCodeInputs' : 'confirmCodeInputs';
-                const firstInput = document.querySelector(`#${containerId} .code-input`);
+function showStep(stepNumber) {
+    document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
+    const nextStep = document.getElementById(`step${stepNumber}`);
+    nextStep.classList.add('active');
+    
+    if (stepNumber === 2 || stepNumber === 3) {
+        const containerId = stepNumber === 2 ? 'accessCodeInputs' : 'confirmCodeInputs';
+        
+        // iOS에서 키보드를 강제로 표시하기 위한 트릭
+        setTimeout(() => {
+            const firstInput = document.querySelector(`#${containerId} .code-input`);
+            if (firstInput) {
+                firstInput.readOnly = false;
                 
-                // 화면 전환 애니메이션이 완료된 후 포커스 설정
-                setTimeout(() => {
-                    if (firstInput) {
-                        firstInput.readOnly = false;
-                        firstInput.focus();
-                    }
-                }, 300);
+                // 1. 먼저 포커스
+                firstInput.focus();
+                
+                // 2. 선택 범위 설정
+                firstInput.setSelectionRange(0, 0);
+                
+                // 3. blur 후 다시 focus
+                firstInput.blur();
+                firstInput.focus();
+                
+                // 4. 클릭 이벤트 시뮬레이션
+                firstInput.click();
             }
-        }
-
+        }, 300);
+    }
+}
         function showError(elementId, message) {
             const errorElement = document.getElementById(elementId);
             errorElement.textContent = message;
@@ -535,48 +545,51 @@
             clearInterval(timerInterval);
         }
 
-        async function startRecording() {
-            try {
-                await showCountdown();
-                
-                if (audioContext.state === "suspended") {
-                    await audioContext.resume();
-                }
-                
-                await getMediaStream();
-                
-                mediaRecorder = new MediaRecorder(mediaStream);
-                audioChunks = [];
+async function startRecording() {
+    try {
+        // 먼저 미디어 스트림과 recorder 초기화
+        const stream = await getMediaStream();
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
 
-                mediaRecorder.ondataavailable = event => {
-                    if (event.data.size > 0) {
-                        audioChunks.push(event.data);
-                    }
-                };
-
-                mediaRecorder.onstop = async () => {
-                    if (audioChunks.length === 0) {
-                        alert("녹음된 오디오가 없습니다. 다시 시도해 주세요.");
-                        return;
-                    }
-                    
-                    recordedBlob = new Blob(audioChunks, { type: "audio/mp4" });
-                    setupAudioPlayer(recordedBlob);
-                    
-                    document.getElementById("setAccessCodeButton").style.display = "block";
-                };
-
-                mediaRecorder.start();
-                startTimer();
-                isRecording = true;
-                document.getElementById("recordButton").classList.add("recording");
-            } catch (error) {
-                console.error('녹음 오류:', error);
-                if (!mediaStream) {
-                    alert("마이크 접근을 허용해주세요.");
-                }
+        mediaRecorder.ondataavailable = event => {
+            if (event.data.size > 0) {
+                audioChunks.push(event.data);
             }
+        };
+
+        mediaRecorder.onstop = async () => {
+            if (audioChunks.length === 0) {
+                alert("녹음된 오디오가 없습니다. 다시 시도해 주세요.");
+                return;
+            }
+            
+            recordedBlob = new Blob(audioChunks, { type: "audio/mp4" });
+            setupAudioPlayer(recordedBlob);
+            
+            document.getElementById("setAccessCodeButton").style.display = "block";
+        };
+
+        // 카운트다운 시작 전에 오디오 컨텍스트 재개
+        if (audioContext.state === "suspended") {
+            await audioContext.resume();
         }
+
+        // 카운트다운 시작
+        await showCountdown();
+        
+        // 카운트다운 직후 즉시 녹음 시작
+        mediaRecorder.start();
+        startTimer();
+        isRecording = true;
+        document.getElementById("recordButton").classList.add("recording");
+    } catch (error) {
+        console.error('녹음 오류:', error);
+        if (!mediaStream) {
+            alert("마이크 접근을 허용해주세요.");
+        }
+    }
+}
 
         function stopRecording() {
             if (mediaRecorder && isRecording) {
